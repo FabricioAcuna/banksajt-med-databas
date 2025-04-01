@@ -41,6 +41,11 @@ app.post("/users", async (req, res) => {
     const params = [username, password];
     const result = await query(sql, params);
     console.log("result", result);
+
+    const userId = result.insertId;
+    const balanceSql = "INSERT INTO balances (user_id, amount) VALUES (?, ?)";
+    await query(balanceSql, [userId, 0]);
+
     res.status(201).json({ message: "User created succesfully" });
   } catch (error) {
     res
@@ -98,15 +103,15 @@ app.post("/accounts", async (req, res) => {
     const sessionSql = "SELECT * FROM sessions WHERE otp = ?";
     const [sessions] = await query(sessionSql, [otp]);
 
-    if (sessions.length > 0) {
-      const session = sessions[0];
+    if (sessions) {
+      const session = sessions;
       const userId = session.user_id;
 
       const balanceSql = "SELECT * FROM balances WHERE user_id = ?";
       const [balances] = await query(balanceSql, [userId]);
 
-      if (balances.length > 0) {
-        const balance = balances[0];
+      if (balances) {
+        const balance = balances;
         res.json({ amount: balance.amount });
       } else {
         res.status(400).json({ message: "Balance not found" });
@@ -127,15 +132,18 @@ app.post("/me/accounts/transactions", async (req, res) => {
     const sessionSql = "SELECT * FROM sessions WHERE otp = ?";
     const [sessions] = await query(sessionSql, [otp]);
 
-    if (sessions.length > 0) {
-      const session = sessions[0];
+    if (sessions) {
+      const session = sessions;
       const userId = session.user_id;
+      console.log("userId", userId);
 
       const balanceSql = "SELECT * FROM balances WHERE user_id = ?";
       const [balances] = await query(balanceSql, [userId]);
 
-      if (balances.length > 0) {
-        const balance = balances[0];
+      console.log("balances", balances);
+
+      if (balances) {
+        const balance = balances;
         const newAmount = balance.amount + amount;
 
         const updateBalanceSql =
@@ -150,8 +158,8 @@ app.post("/me/accounts/transactions", async (req, res) => {
       res.status(400).json({ message: "Invalid OTP" });
     }
   } catch (error) {
-    console.error("Error processing transaction:", error);
-    res.status(500).send("Error processing transaction");
+    console.error("Error with transaction:", error);
+    res.status(500).send("Error with transaction");
   }
 });
 
